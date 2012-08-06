@@ -2,11 +2,11 @@ set :application, "blog_app"
 set :user, "blogger"
 
 set :scm, :git
-set :repository, "git@github.com:t-javcam/blog-azure.git"
+set :repository, "https://github.com/t-javcam/blogazure2.git"
 set :branch, "master"
 set :use_sudo, true
 
-server "168.62.4.220", :web, :app, :db, primary: true
+server "157.56.163.7", :web, :app, :db, primary: true
 
 set :deploy_to, "/home/#{user}/apps/#{application}"
 default_run_options[:pty] = true
@@ -31,13 +31,4 @@ namespace :deploy do
     # Add database config here
   end
   after "deploy:finalize_update", "deploy:symlink_config"
-
-  task :check_revision, roles: :web do
-    unless `git rev-parse HEAD` == `git rev-parse origin/master`
-      puts "WARNING: HEAD is not the same as origin/master"
-      puts "Run `git push` to sync changes."
-      exit
-    end
-  end
-  before "deploy", "deploy:check_revision"
 end
