@@ -1,25 +1,43 @@
-set :application, "set your application name here"
-set :repository,  "set your repository location here"
+set :application, "blog_app"
+set :user, "blogger"
 
-set :scm, :subversion
-# Or: `accurev`, `bzr`, `cvs`, `darcs`, `git`, `mercurial`, `perforce`, `subversion` or `none`
+set :scm, :git
+set :repository, "git@github.com:t-javcam/blog-azure.git"
+set :branch, "master"
+set :use_sudo, true
 
-role :web, "your web-server here"                          # Your HTTP server, Apache/etc
-role :app, "your app-server here"                          # This may be the same as your `Web` server
-role :db,  "your primary db-server here", :primary => true # This is where Rails migrations will run
-role :db,  "your slave db-server here"
+server "168.62.4.220", :web, :app, :db, primary: true
 
-# if you want to clean up old releases on each deploy uncomment this:
-# after "deploy:restart", "deploy:cleanup"
+set :deploy_to, "/home/#{user}/apps/#{application}"
+default_run_options[:pty] = true
+ssh_options[:forward_agent] = true
 
-# if you're still using the script/reaper helper you will need
-# these http://github.com/rails/irs_process_scripts
+namespace :deploy do
+  %w[start stop restart].each do |command|
+    desc "#{command} unicorn server"
+    task command, roles: :app, except: {no_release: true} do
+      run "/etc/init.d/unicorn_#{application} #{command}"
+    end
+  end
 
-# If you are using Passenger mod_rails uncomment this:
-# namespace :deploy do
-#   task :start do ; end
-#   task :stop do ; end
-#   task :restart, :roles => :app, :except => { :no_release => true } do
-#     run "#{try_sudo} touch #{File.join(current_path,'tmp','restart.txt')}"
-#   end
-# end
+  task :setup_config, roles: :app do
+    sudo "ln -nfs #{current_path}/config/nginx.conf /etc/nginx/sites-enabled/#{application}"
+    sudo "ln -nfs #{current_path}/config/unicorn_init.sh /etc/init.d/unicorn_#{application}"
+    sudo "mkdir -p #{shared_path}/config"
+  end
+  after "deploy:setup", "deploy:setup_config"
+
+  task :symlink_config, roles: :app do
+    # Add database config here
+  end
+  after "deploy:finalize_update", "deploy:symlink_config"
+
+  task :check_revision, roles: :web do
+    unless `git rev-parse HEAD` == `git rev-parse origin/master`
+      puts "WARNING: HEAD is not the same as origin/master"
+      puts "Run `git push` to sync changes."
+      exit
+    end
+  end
+  before "deploy", "deploy:check_revision"
+end
