@@ -1,3 +1,5 @@
+require "bundler/capistrano"
+
 set :application, "blog_app"
 set :user, "blogger"
 
